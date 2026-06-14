@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoundMaster — Emparejamientos</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    a, a:visited { color: inherit; text-decoration: none; }
+
+    /* ── Pantalla emparejamientos ── */
+    .emp-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .emp-titulo {
+      font-family: var(--fh); font-size: 28px; font-weight: 700; color: var(--accent);
+    }
+    .emp-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    /* Tabla de emparejamientos estilo TOM */
+    .emp-table { width: 100%; border-collapse: collapse; }
+    .emp-table th {
+      font-family: var(--fh); font-size: 10px; font-weight: 600;
+      letter-spacing: 1.5px; text-transform: uppercase; color: var(--text2);
+      padding: 10px 16px; border-bottom: 1px solid var(--border); text-align: left;
+    }
+    .emp-row {
+      border-bottom: 1px solid rgba(34,40,64,.5);
+      transition: background .15s;
+      cursor: grab;
+    }
+    .emp-row:last-child { border-bottom: none; }
+    .emp-row:hover { background: rgba(255,255,255,.02); }
+    .emp-row.dragging { opacity: .4; cursor: grabbing; }
+    .emp-row.drag-over { background: rgba(223,163,20,.06); border-top: 2px solid var(--accent); }
+
+    .emp-mesa-num {
+      font-family: var(--fm); font-size: 13px; color: var(--accent);
+      font-weight: 600; padding: 14px 16px; width: 80px;
+    }
+    .emp-mesa-num.mesa-1 { font-size: 16px; }
+
+    .emp-player {
+      padding: 14px 10px; vertical-align: middle;
+    }
+    .emp-player-name {
+      font-family: var(--fh); font-size: 17px; font-weight: 600; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .emp-player-name.top { color: var(--gold); }
+    .emp-pts-badge {
+      font-family: var(--fm); font-size: 11px; color: var(--text2);
+      background: var(--bg4); border: 1px solid var(--border);
+      border-radius: 4px; padding: 2px 7px;
+    }
+    .emp-pts-badge strong { color: var(--accent); }
+
+    .emp-vs {
+      padding: 14px 8px; text-align: center; vertical-align: middle;
+      font-family: var(--fh); font-size: 15px; font-weight: 700;
+      color: var(--border); width: 50px;
+    }
+
+    .emp-pid {
+      font-family: var(--fm); font-size: 11px; color: var(--text2);
+      padding: 14px 16px; vertical-align: middle; white-space: nowrap;
+    }
+
+    .emp-drag-handle {
+      padding: 14px 12px; color: var(--text2); font-size: 16px;
+      cursor: grab; user-select: none; vertical-align: middle;
+    }
+
+    /* BYE row */
+    .emp-row.bye-row { background: rgba(223,163,20,.04); }
+    .emp-bye-tag {
+      font-family: var(--fm); font-size: 11px; color: var(--accent);
+      background: rgba(223,163,20,.1); border: 1px solid rgba(223,163,20,.2);
+      border-radius: 20px; padding: 3px 10px; margin-left: 8px;
+    }
+
+    /* Info panel */
+    .info-bar {
+      display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+      align-items: center; justify-content: space-between;
+    }
+    .info-pill {
+      font-family: var(--fm); font-size: 11px; color: var(--text3);
+      background: var(--bg3); border: 1px solid var(--border);
+      padding: 5px 12px; border-radius: 20px;
+    }
+    .info-pill span { color: var(--accent); font-weight: 600; }
+
+    /* Aviso drag */
+    .drag-tip {
+      font-size: 12px; color: var(--text2); display: flex; align-items: center;
+      gap: 6px; padding: 10px 16px; background: var(--bg3);
+      border-radius: var(--r); margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+
+    /* Pantalla proyección (modo display) */
+    .proj-overlay {
+      display: none; position: fixed; inset: 0; background: var(--bg);
+      z-index: 200; overflow-y: auto;
+    }
+    .proj-overlay.active { display: block; }
+    .proj-header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 40px; border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .proj-logo { height: 44px; }
+    .proj-titulo {
+      font-family: var(--fh); font-size: 28px; font-weight: 700;
+      letter-spacing: 2px; color: var(--accent);
+    }
+    .proj-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+    .proj-sep { flex: 1; }
+    .proj-ronda {
+      font-family: var(--fh); font-size: 20px; font-weight: 700; color: var(--text3);
+    }
+
+    .proj-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+      gap: 16px; padding: 28px 40px;
+    }
+    .proj-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden;
+    }
+    .proj-card-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 18px; background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+    }
+    .proj-mesa {
+      font-family: var(--fm); font-size: 13px; color: var(--accent); font-weight: 600;
+    }
+    .proj-match {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; gap: 12px; padding: 20px 18px;
+    }
+    .proj-name {
+      font-family: var(--fh); font-size: 22px; font-weight: 700; color: var(--text);
+    }
+    .proj-name.right { text-align: right; }
+    .proj-pts {
+      font-family: var(--fm); font-size: 12px; color: var(--text2);
+      margin-top: 3px;
+    }
+    .proj-pts strong { color: var(--accent); }
+    .proj-vs {
+      font-family: var(--fh); font-size: 20px; font-weight: 700;
+      color: var(--border); text-align: center;
+    }
+    .proj-bye {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 18px;
+    }
+    .proj-bye-name { font-family: var(--fh); font-size: 22px; font-weight: 700; color: var(--accent); }
+    .proj-bye-tag {
+      font-family: var(--fm); font-size: 11px; padding: 4px 12px;
+      background: rgba(223,163,20,.1); color: var(--accent);
+      border: 1px solid rgba(223,163,20,.25); border-radius: 20px;
+    }
+
+    .btn-close-proj {
+      position: fixed; top: 16px; right: 16px; z-index: 201;
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text3); font-family: var(--fh); font-size: 13px;
+      font-weight: 600; letter-spacing: 1px; padding: 8px 16px;
+      border-radius: var(--r); cursor: pointer; text-transform: uppercase;
+    }
+    .btn-close-proj:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/" style="display:flex;align-items:center;gap:10px">
+    <img src="/static/logo.png" style="height:32px;width:auto">
+    <span style="font-family:var(--fh);font-size:19px;font-weight:700;letter-spacing:2px;color:var(--accent)">ROUND<span style="color:var(--text2);font-weight:500">MASTER</span></span>
+  </a>
+  <div class="topbar-sep"></div>
+  <a id="link-torneo" href="#" style="font-family:var(--fm);font-size:11px;color:var(--text3)">← Volver al torneo</a>
+</nav>
+
+<div class="container">
+  <div class="emp-header">
+    <div>
+      <div class="emp-titulo" id="emp-titulo">Emparejamientos</div>
+      <div class="emp-sub" id="emp-sub">Cargando...</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary" id="btn-refresh">↻ Actualizar</button>
+      <button class="btn btn-secondary" id="btn-proyectar">⛶ Proyectar</button>
+      <a id="btn-volver" href="#" class="btn btn-primary">← Volver al torneo</a>
+    </div>
+  </div>
+
+  <div class="info-bar">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="info-pill">Ronda <span id="pill-ronda">—</span></span>
+      <span class="info-pill">Mesas <span id="pill-mesas">—</span></span>
+      <span class="info-pill">Pendientes <span id="pill-pendientes">—</span></span>
+    </div>
+    <span style="font-size:11px;color:var(--text2)">Mesa 1 = líderes del torneo</span>
+  </div>
+
+  <div class="drag-tip">
+    ☰ &nbsp; Arrastra las filas para reasignar mesas — la Mesa 1 siempre es para los primeros lugares
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="overflow-x:auto">
+      <table class="emp-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th style="width:80px">Mesa</th>
+            <th>Jugador 1</th>
+            <th style="width:50px;text-align:center">VS</th>
+            <th>Jugador 2</th>
+            <th style="width:140px">Player IDs</th>
+          </tr>
+        </thead>
+        <tbody id="emp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay proyección -->
+<div class="proj-overlay" id="proj-overlay">
+  <button class="btn-close-proj" id="btn-close-proj">✕ Cerrar</button>
+  <div class="proj-header">
+    <img src="/static/logo.png" class="proj-logo" alt="RoundMaster">
+    <div>
+      <div class="proj-titulo" id="proj-titulo">—</div>
+      <div class="proj-sub" id="proj-sub">—</div>
+    </div>
+    <div class="proj-sep"></div>
+    <div class="proj-ronda" id="proj-ronda">—</div>
+  </div>
+  <div class="proj-grid" id="proj-grid"></div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+const params   = new URLSearchParams(location.search);
+const torneoId = parseInt(params.get('id'));
+let torneo     = null;
+let partidas   = [];
+let ranking    = [];
+let ordenMesas = []; // orden actual de partidas (editable)
+
+// Fix links
+document.getElementById('link-torneo').href  = `/torneo/${torneoId}`;
+document.getElementById('btn-volver').href   = `/torneo/${torneoId}`;
+
+function getPuntos(jid) {
+  const r = ranking.find(x => x.jugador_id === jid);
+  return r ? r.puntos : 0;
+}
+function getPosicion(jid) {
+  const r = ranking.find(x => x.jugador_id === jid);
+  return r ? r.posicion : 99;
+}
+
+async function cargarDatos() {
+  try {
+    [torneo, ranking] = await Promise.all([
+      get(`/torneos/${torneoId}`),
+      get(`/torneos/${torneoId}/ranking`)
+    ]);
+    partidas = await get(`/torneos/${torneoId}/partidas?ronda=${torneo.ronda_actual}`);
+
+    // Ordenar: mejor posición de sus jugadores primero (Mesa 1 = líderes)
+    partidas.sort((a, b) => {
+      const bestA = a.jugador2
+        ? Math.min(getPosicion(a.jugador1.id), getPosicion(a.jugador2.id))
+        : getPosicion(a.jugador1.id);
+      const bestB = b.jugador2
+        ? Math.min(getPosicion(b.jugador1.id), getPosicion(b.jugador2.id))
+        : getPosicion(b.jugador1.id);
+      return bestA - bestB;
+    });
+
+    ordenMesas = [...partidas];
+
+    // Info pills
+    document.getElementById('emp-titulo').textContent = torneo.nombre;
+    document.getElementById('emp-sub').textContent    = `📅 ${fmtFecha(torneo.fecha)}  ·  🏪 ${torneo.tienda}  ·  📍 ${torneo.lugar}`;
+    document.getElementById('pill-ronda').textContent = `${torneo.ronda_actual} / ${torneo.total_rondas}`;
+    document.getElementById('pill-mesas').textContent = partidas.filter(p => p.jugador2).length;
+    document.getElementById('pill-pendientes').textContent = partidas.filter(p => !p.resultado).length;
+
+    renderTabla();
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+function renderTabla() {
+  const tbody = document.getElementById('emp-tbody');
+  tbody.innerHTML = ordenMesas.map((p, idx) => {
+    const mesaNum  = idx + 1;
+    const esBye    = !p.jugador2 || p.resultado === 'bye';
+    const completa = !!p.resultado;
+    const pts1     = getPuntos(p.jugador1.id);
+    const pts2     = p.jugador2 ? getPuntos(p.jugador2.id) : null;
+    const esTop    = mesaNum === 1;
+
+    if (esBye) return `
+      <tr class="emp-row bye-row" draggable="true" data-idx="${idx}">
+        <td class="emp-drag-handle">⠿</td>
+        <td class="emp-mesa-num ${esTop ? 'mesa-1' : ''}">M${mesaNum}</td>
+        <td class="emp-player" colspan="3">
+          <div class="emp-player-name ${esTop ? 'top' : ''}">
+            ${p.jugador1.nombre}
+            <span class="emp-bye-tag">BYE — Victoria automática</span>
+          </div>
+        </td>
+        <td class="emp-pid">${p.jugador1.player_id}</td>
+      </tr>`;
+
+    return `
+      <tr class="emp-row ${completa ? 'completa' : ''}" draggable="true" data-idx="${idx}">
+        <td class="emp-drag-handle">⠿</td>
+        <td class="emp-mesa-num ${esTop ? 'mesa-1' : ''}">M${mesaNum}</td>
+        <td class="emp-player">
+          <div class="emp-player-name ${esTop ? 'top' : ''}">
+            ${p.jugador1.nombre}
+            <span class="emp-pts-badge"><strong>${pts1}</strong> pts</span>
+          </div>
+        </td>
+        <td class="emp-vs">VS</td>
+        <td class="emp-player">
+          <div class="emp-player-name">
+            ${p.jugador2.nombre}
+            <span class="emp-pts-badge"><strong>${pts2}</strong> pts</span>
+          </div>
+        </td>
+        <td class="emp-pid" style="font-size:10px;color:var(--text2)">
+          ${p.jugador1.player_id}<br>${p.jugador2.player_id}
+        </td>
+      </tr>`;
+  }).join('');
+
+  initDragDrop();
+}
+
+// ── Drag & Drop para reasignar mesas ──
+function initDragDrop() {
+  const rows = document.querySelectorAll('.emp-row[draggable]');
+  let dragIdx = null;
+
+  rows.forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragIdx = parseInt(row.dataset.idx);
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.emp-row').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.emp-row').forEach(r => r.classList.remove('drag-over'));
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      const dropIdx = parseInt(row.dataset.idx);
+      if (dragIdx === dropIdx) return;
+      // Intercambiar posiciones
+      const temp = ordenMesas[dragIdx];
+      ordenMesas[dragIdx] = ordenMesas[dropIdx];
+      ordenMesas[dropIdx] = temp;
+      renderTabla();
+      toast(`Mesa ${dragIdx+1} ↔ Mesa ${dropIdx+1} intercambiadas`, 'info');
+    });
+  });
+}
+
+// ── Proyección ──
+document.getElementById('btn-proyectar').addEventListener('click', () => {
+  const overlay = document.getElementById('proj-overlay');
+  document.getElementById('proj-titulo').textContent = torneo.nombre;
+  document.getElementById('proj-sub').textContent    = `${torneo.tienda}  ·  ${torneo.lugar}`;
+  document.getElementById('proj-ronda').textContent  = `Ronda ${torneo.ronda_actual} / ${torneo.total_rondas}`;
+
+  document.getElementById('proj-grid').innerHTML = ordenMesas.map((p, idx) => {
+    const mesaNum = idx + 1;
+    const esBye   = !p.jugador2 || p.resultado === 'bye';
+    const pts1    = getPuntos(p.jugador1.id);
+    const pts2    = p.jugador2 ? getPuntos(p.jugador2.id) : null;
+
+    if (esBye) return `
+      <div class="proj-card">
+        <div class="proj-card-head">
+          <span class="proj-mesa">MESA ${mesaNum}</span>
+          <span class="badge badge-gold">BYE</span>
+        </div>
+        <div class="proj-bye">
+          <div class="proj-bye-name">${p.jugador1.nombre}</div>
+          <span class="proj-bye-tag">Victoria automática · +3 pts</span>
+        </div>
+      </div>`;
+
+    return `
+      <div class="proj-card">
+        <div class="proj-card-head">
+          <span class="proj-mesa">MESA ${mesaNum}</span>
+          <span class="badge ${p.resultado ? 'badge-green' : 'badge-blue'}">${p.resultado ? '✓ Registrado' : 'En juego'}</span>
+        </div>
+        <div class="proj-match">
+          <div>
+            <div class="proj-name">${p.jugador1.nombre}</div>
+            <div class="proj-pts"><strong>${pts1}</strong> pts</div>
+          </div>
+          <div class="proj-vs">VS</div>
+          <div style="text-align:right">
+            <div class="proj-name right">${p.jugador2.nombre}</div>
+            <div class="proj-pts" style="text-align:right"><strong>${pts2}</strong> pts</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  overlay.classList.add('active');
+});
+
+document.getElementById('btn-close-proj').addEventListener('click', () => {
+  document.getElementById('proj-overlay').classList.remove('active');
+});
+
+document.getElementById('btn-refresh').addEventListener('click', cargarDatos);
+
+if (!torneoId) {
+  document.getElementById('emp-tbody').innerHTML =
+    '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text2)">Sin torneo seleccionado</td></tr>';
+} else {
+  cargarDatos();
+}
+</script>
+</body>
+</html>

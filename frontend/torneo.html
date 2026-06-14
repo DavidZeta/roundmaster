@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SwissDesk</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav class="topbar">
+  <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+    <img src="/static/logo.png" style="height:32px;width:auto">
+    <span style="font-family:var(--fh);font-size:19px;font-weight:700;letter-spacing:2px;color:var(--accent)">ROUND<span style="color:var(--text2);font-weight:500">MASTER</span></span>
+  </a>
+  <div class="topbar-sep"></div>
+  <span id="topbar-estado" class="topbar-pill">Cargando...</span>
+</nav>
+
+<div class="container">
+  <div style="margin-bottom:26px">
+    <div class="page-title" id="torneo-nombre">—</div>
+    <div class="page-sub" id="torneo-meta">—</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-val" id="st-jugadores">0</div><div class="stat-lbl">Jugadores</div></div>
+    <div class="stat-box"><div class="stat-val" id="st-ronda">0</div><div class="stat-lbl">Ronda actual</div></div>
+    <div class="stat-box"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total rondas</div></div>
+    <div class="stat-box"><div class="stat-val" id="st-pendientes">—</div><div class="stat-lbl">Pendientes</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="tab-jugadores">Jugadores</button>
+    <button class="tab" data-tab="tab-rondas">Rondas</button>
+    <button class="tab" data-tab="tab-ranking">Ranking</button>
+  </div>
+
+  <!-- Tab Jugadores -->
+  <div class="tab-panel active" id="tab-jugadores">
+    <div class="card" id="panel-inscripcion">
+      <div class="card-title">Inscribir jugador</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div style="flex:2;min-width:200px">
+          <input id="inp-buscar" class="form-input" placeholder="Buscar por nombre o Player ID..." type="text">
+        </div>
+        <button class="btn btn-secondary" id="btn-nuevo-jugador">+ Nuevo jugador</button>
+      </div>
+      <div id="busqueda-resultado" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" id="form-nuevo-jugador" style="display:none">
+      <div class="card-title">Nuevo jugador</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Nombre completo</label>
+          <input id="inp-jug-nombre" class="form-input" placeholder="Nombre del jugador" type="text">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Player ID</label>
+          <input id="inp-jug-playerid" class="form-input" placeholder="Ej: CHLS-2024-001" type="text">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" id="btn-crear-jugador">Crear e inscribir</button>
+        <button class="btn btn-secondary" id="btn-cancelar-nuevo">Cancelar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Participantes inscritos</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>#</th><th>Nombre</th><th>Player ID</th><th></th></tr></thead>
+          <tbody id="tabla-jugadores">
+            <tr><td colspan="4" style="text-align:center;color:var(--text2);padding:28px">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="panel-iniciar" style="display:none;margin-top:8px">
+      <button class="btn btn-primary btn-full" id="btn-iniciar" style="font-size:16px;padding:16px;letter-spacing:2px">
+        ⚔️ &nbsp; INICIAR TORNEO
+      </button>
+    </div>
+  </div>
+
+  <!-- Tab Rondas -->
+  <div class="tab-panel" id="tab-rondas">
+    <div class="ronda-header">
+      <div class="ronda-titulo" id="ronda-titulo">—</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-secondary" id="btn-refresh-ronda">↻ Actualizar</button>
+        <a id="btn-ver-emp" href="#" class="btn btn-secondary" style="display:none">⛶ Ver emparejamientos</a>
+        <button class="btn btn-primary"  id="btn-siguiente-ronda" style="display:none">Siguiente ronda →</button>
+        <button class="btn btn-primary"  id="btn-finalizar"       style="display:none">🏆 Finalizar torneo</button>
+      </div>
+    </div>
+    <div class="mesa-grid" id="mesa-grid">
+      <div class="empty"><div class="empty-icon">⚔️</div>El torneo aún no ha iniciado</div>
+    </div>
+  </div>
+
+  <!-- Tab Ranking -->
+  <div class="tab-panel" id="tab-ranking">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+      <button class="btn btn-secondary" id="btn-refresh-ranking">↻ Actualizar ranking</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th style="width:52px;text-align:center">Pos</th>
+            <th>Jugador</th>
+            <th style="text-align:center">Pts</th>
+            <th style="text-align:center">W</th>
+            <th style="text-align:center">D</th>
+            <th style="text-align:center">L</th>
+            <th style="text-align:right;padding-right:20px">OMW%</th>
+          </tr></thead>
+          <tbody id="tabla-ranking">
+            <tr><td colspan="7" style="text-align:center;color:var(--text2);padding:28px">Sin datos aún</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+const torneoId = parseInt(location.pathname.split('/').pop());
+let torneo = null, jugadores = [], todosJugadores = [], rankingActual = [];
+
+async function cargarTorneo() {
+  try {
+    torneo = await get(`/torneos/${torneoId}`);
+    document.getElementById('torneo-nombre').textContent = torneo.nombre;
+    document.getElementById('torneo-meta').textContent =
+      `📅 ${fmtFecha(torneo.fecha)}  ·  🏪 ${torneo.tienda}  ·  📍 ${torneo.lugar}`;
+    document.getElementById('st-jugadores').textContent = torneo.num_participantes;
+    document.getElementById('st-ronda').textContent     = torneo.ronda_actual;
+    document.getElementById('st-total').textContent     = torneo.total_rondas;
+    document.getElementById('topbar-estado').textContent =
+      torneo.finalizado ? '🏆 Finalizado'
+      : torneo.ronda_actual > 0 ? `Ronda ${torneo.ronda_actual} / ${torneo.total_rondas}`
+      : 'Inscripciones abiertas';
+    const iniciado = torneo.ronda_actual > 0;
+    document.getElementById('panel-inscripcion').style.display  = iniciado ? 'none' : 'block';
+    document.getElementById('panel-iniciar').style.display      = iniciado ? 'none' : 'block';
+    document.getElementById('form-nuevo-jugador').style.display = 'none';
+    document.getElementById('btn-ver-emp').style.display        = iniciado ? 'inline-flex' : 'none';
+    document.getElementById('btn-ver-emp').href = `/emparejamientos?id=${torneoId}`;
+    if (iniciado) { cargarRonda(); cargarRanking(); }
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function cargarJugadores() {
+  try {
+    jugadores = await get(`/torneos/${torneoId}/jugadores`);
+    const tbody = document.getElementById('tabla-jugadores');
+    if (!jugadores.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:28px">Sin jugadores inscritos</td></tr>';
+      document.getElementById('btn-iniciar').style.display = 'none';
+      return;
+    }
+    tbody.innerHTML = jugadores.map((j,i) => `
+      <tr>
+        <td style="color:var(--text2);font-family:var(--fm);font-size:12px">${i+1}</td>
+        <td><span class="rk-name">${j.nombre}</span></td>
+        <td><span class="rk-pid">${j.player_id}</span></td>
+        <td>${torneo?.ronda_actual === 0
+          ? `<button class="btn btn-danger btn-sm" onclick="darBaja(${j.id},'${j.nombre}')">Dar baja</button>`
+          : '—'}</td>
+      </tr>`).join('');
+    document.getElementById('btn-iniciar').style.display = jugadores.length >= 2 ? 'flex' : 'none';
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function darBaja(id, nombre) {
+  if (!confirm(`¿Dar de baja a ${nombre}?`)) return;
+  try { await del(`/torneos/${torneoId}/jugadores/${id}`); toast(`${nombre} dado de baja`, 'info'); cargarJugadores(); cargarTorneo(); }
+  catch(e) { toast(e.message, 'err'); }
+}
+
+async function cargarTodosJugadores() { todosJugadores = await get('/jugadores/'); }
+
+document.getElementById('inp-buscar').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  const res = document.getElementById('busqueda-resultado');
+  if (!q) { res.innerHTML = ''; return; }
+  const yaInscritos = new Set(jugadores.map(j => j.id));
+  const found = todosJugadores.filter(j =>
+    !yaInscritos.has(j.id) &&
+    (j.nombre.toLowerCase().includes(q) || j.player_id.toLowerCase().includes(q))
+  ).slice(0,5);
+  if (!found.length) { res.innerHTML = '<div style="color:var(--text2);font-size:13px;padding:8px 0">No encontrado — usa "+ Nuevo jugador"</div>'; return; }
+  res.innerHTML = found.map(j => `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1"><strong>${j.nombre}</strong>
+        <span style="font-family:var(--fm);color:var(--text2);font-size:12px;margin-left:8px">${j.player_id}</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="inscribirExistente(${j.id},'${j.nombre}')">Inscribir</button>
+    </div>`).join('');
+});
+
+async function inscribirExistente(id, nombre) {
+  try { await post(`/torneos/${torneoId}/jugadores`, {jugador_id: id}); toast(`${nombre} inscrito`, 'ok');
+    document.getElementById('inp-buscar').value = ''; document.getElementById('busqueda-resultado').innerHTML = '';
+    cargarJugadores(); cargarTorneo();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+document.getElementById('btn-nuevo-jugador').addEventListener('click', () => { document.getElementById('form-nuevo-jugador').style.display = 'block'; });
+document.getElementById('btn-cancelar-nuevo').addEventListener('click', () => { document.getElementById('form-nuevo-jugador').style.display = 'none'; });
+document.getElementById('btn-crear-jugador').addEventListener('click', async () => {
+  const nombre = document.getElementById('inp-jug-nombre').value.trim();
+  const pid    = document.getElementById('inp-jug-playerid').value.trim();
+  if (!nombre || !pid) { toast('Completa nombre y Player ID', 'err'); return; }
+  try {
+    const nuevo = await post('/jugadores/', {nombre, player_id: pid});
+    await post(`/torneos/${torneoId}/jugadores`, {jugador_id: nuevo.id});
+    toast(`${nombre} creado e inscrito`, 'ok');
+    document.getElementById('inp-jug-nombre').value = '';
+    document.getElementById('inp-jug-playerid').value = '';
+    document.getElementById('form-nuevo-jugador').style.display = 'none';
+    cargarJugadores(); cargarTorneo(); cargarTodosJugadores();
+  } catch(e) { toast(e.message, 'err'); }
+});
+
+document.getElementById('btn-iniciar').addEventListener('click', async () => {
+  if (!confirm(`¿Iniciar el torneo con ${jugadores.length} jugadores?`)) return;
+  try { await post(`/torneos/${torneoId}/iniciar`, {}); toast('¡Torneo iniciado!', 'ok');
+    await cargarTorneo(); cargarJugadores();
+    document.querySelector('[data-tab="tab-rondas"]').click();
+  } catch(e) { toast(e.message, 'err'); }
+});
+
+function getPuntos(jid) { const r = rankingActual.find(x => x.jugador_id === jid); return r ? r.puntos : 0; }
+
+async function cargarRonda() {
+  if (!torneo || torneo.ronda_actual === 0) return;
+  try {
+    const partidas = await get(`/torneos/${torneoId}/partidas?ronda=${torneo.ronda_actual}`);
+    const pendientes = partidas.filter(p => !p.resultado).length;
+    document.getElementById('st-pendientes').textContent = pendientes;
+    document.getElementById('ronda-titulo').textContent = `Ronda ${torneo.ronda_actual} de ${torneo.total_rondas}`;
+
+    const btnSig = document.getElementById('btn-siguiente-ronda');
+    const btnFin = document.getElementById('btn-finalizar');
+    btnSig.style.display = 'none'; btnFin.style.display = 'none';
+    if (pendientes === 0 && !torneo.finalizado) {
+      if (torneo.ronda_actual >= torneo.total_rondas) btnFin.style.display = 'inline-flex';
+      else btnSig.style.display = 'inline-flex';
+    }
+
+    const grid = document.getElementById('mesa-grid');
+    if (!partidas.length) { grid.innerHTML = '<div class="empty"><div class="empty-icon">⚔️</div>Sin partidas</div>'; return; }
+
+    grid.innerHTML = partidas.map(p => {
+      const esBye   = p.resultado === 'bye';
+      const completa = !!p.resultado;
+      const j1win  = p.ganador_id === p.jugador1.id;
+      const j2win  = p.jugador2 && p.ganador_id === p.jugador2.id;
+      const pts1   = getPuntos(p.jugador1.id);
+      const pts2   = p.jugador2 ? getPuntos(p.jugador2.id) : null;
+
+      if (esBye) return `
+        <div class="mesa-card bye">
+          <div class="mesa-head">
+            <span class="mesa-num-label">MESA <strong>${p.mesa}</strong></span>
+            <span class="badge badge-gold">BYE automático</span>
+          </div>
+          <div class="bye-body">
+            <div class="bye-name">${p.jugador1.nombre}</div>
+            <div class="bye-info">
+              <div class="bye-badge">Victoria automática</div>
+              <div class="bye-sub">+3 puntos</div>
+            </div>
+          </div>
+        </div>`;
+
+      return `
+        <div class="mesa-card ${completa ? 'completa' : 'pendiente'}">
+          <div class="mesa-head">
+            <span class="mesa-num-label">MESA <strong>${p.mesa}</strong></span>
+            ${completa
+              ? '<span class="badge badge-green">✓ Registrado</span>'
+              : '<span class="badge badge-blue">En juego</span>'}
+          </div>
+
+          <div class="mesa-match">
+            <div class="player-side">
+              <div class="player-name ${j1win ? 'winner' : ''}">${p.jugador1.nombre}</div>
+              <div class="player-pts"><strong>${pts1}</strong> pts</div>
+            </div>
+
+            <div class="vs-col">
+              <div class="vs-text">VS</div>
+              <div class="vs-ronda">R${torneo.ronda_actual}</div>
+            </div>
+
+            <div class="player-side right">
+              <div class="player-name ${j2win ? 'winner' : ''}">${p.jugador2.nombre}</div>
+              <div class="player-pts"><strong>${pts2}</strong> pts</div>
+            </div>
+          </div>
+
+          ${!completa ? `
+            <div class="mesa-actions">
+              <button class="btn-gana" onclick="registrar(${p.id},'gana1','${p.jugador1.nombre}')">
+                🏆 ${p.jugador1.nombre.split(' ')[0]}
+              </button>
+              <button class="btn-draw" onclick="registrar(${p.id},'empate','Empate')">
+                Empate
+              </button>
+              <button class="btn-gana" onclick="registrar(${p.id},'gana2','${p.jugador2.nombre}')">
+                🏆 ${p.jugador2.nombre.split(' ')[0]}
+              </button>
+            </div>` : `
+            <button class="btn-fix" onclick="borrarResultado(${p.id})">↩ Corregir resultado</button>`}
+        </div>`;
+    }).join('');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function registrar(pid, resultado, label) {
+  try { await put(`/torneos/${torneoId}/partidas/${pid}/resultado`, {resultado});
+    toast(`${label} registrado`, 'ok');
+    await cargarRanking(); await cargarTorneo(); cargarRonda();
+  } catch(e) { toast(e.message, 'err'); }
+}
+async function borrarResultado(pid) {
+  try { await del(`/torneos/${torneoId}/partidas/${pid}/resultado`);
+    toast('Resultado borrado', 'info');
+    await cargarRanking(); await cargarTorneo(); cargarRonda();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+document.getElementById('btn-refresh-ronda').addEventListener('click', async () => { await cargarTorneo(); await cargarRanking(); cargarRonda(); });
+document.getElementById('btn-siguiente-ronda').addEventListener('click', async () => {
+  try { const r = await post(`/torneos/${torneoId}/siguiente-ronda`, {}); toast(r.mensaje, 'ok');
+    await cargarTorneo(); await cargarRanking(); cargarRonda();
+  } catch(e) { toast(e.message, 'err'); }
+});
+document.getElementById('btn-finalizar').addEventListener('click', async () => {
+  try { await post(`/torneos/${torneoId}/siguiente-ronda`, {}); toast('🏆 ¡Torneo finalizado!', 'ok');
+    await cargarTorneo(); await cargarRanking();
+    document.querySelector('[data-tab="tab-ranking"]').click();
+  } catch(e) { toast(e.message, 'err'); }
+});
+
+async function cargarRanking() {
+  try {
+    rankingActual = await get(`/torneos/${torneoId}/ranking`);
+    const medallas = ['🥇','🥈','🥉'];
+    document.getElementById('tabla-ranking').innerHTML = rankingActual.map(r => `
+      <tr>
+        <td style="text-align:center">
+          ${r.posicion <= 3
+            ? `<span class="rk-medal">${medallas[r.posicion-1]}</span>`
+            : `<span class="rk-num">${r.posicion}</span>`}
+        </td>
+        <td>
+          <span class="rk-name">${r.nombre}</span>
+          <span class="rk-pid">${r.player_id}</span>
+        </td>
+        <td style="text-align:center"><span class="rk-pts">${r.puntos}</span></td>
+        <td style="text-align:center"><span class="rk-w">${r.wins}</span></td>
+        <td style="text-align:center"><span class="rk-d">${r.draws}</span></td>
+        <td style="text-align:center"><span class="rk-l">${r.losses}</span></td>
+        <td style="text-align:right;padding-right:20px"><span class="rk-omw">${r.omw}%</span></td>
+      </tr>`).join('')
+      || '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:28px">Sin datos aún</td></tr>';
+  } catch(e) { toast(e.message, 'err'); }
+}
+document.getElementById('btn-refresh-ranking').addEventListener('click', cargarRanking);
+
+initTabs();
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.tab === 'tab-rondas')  { cargarRanking(); cargarRonda(); }
+    if (tab.dataset.tab === 'tab-ranking') cargarRanking();
+  });
+});
+(async () => { await cargarRanking(); await cargarTorneo(); await cargarJugadores(); await cargarTodosJugadores(); })();
+</script>
+</body>
+</html>

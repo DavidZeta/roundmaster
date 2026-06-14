@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoundMaster — Swiss Round Manager</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* Hero pantalla de inicio */
+    .hero {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 44vh;
+      padding: 32px 24px 8px; text-align: center;
+    }
+    .hero-logo { width: min(400px, 78vw); height: auto; margin-bottom: 6px; filter: drop-shadow(0 0 52px rgba(223,163,20,.5)) drop-shadow(0 0 18px rgba(223,163,20,.25)); }
+    .hero-title { font-family: var(--fh); font-size: 13px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--text2); margin-bottom: 6px; }
+    .hero-sub { font-size: 13px; color: var(--text2); }
+
+    /* Fix link visitado */
+    a { color: inherit; }
+    a:visited { color: inherit; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a class="logo" href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+    <img src="/static/logo.png" style="height:34px;width:auto">
+    <span style="font-family:var(--fh);font-size:20px;font-weight:700;letter-spacing:2px;color:var(--accent)">ROUND<span style="color:var(--text2);font-weight:500">MASTER</span></span>
+  </a>
+  <div class="topbar-sep"></div>
+  <span class="topbar-pill">Swiss Round Manager</span>
+</nav>
+
+<div class="hero">
+  <img src="/static/logo.png" class="hero-logo" alt="RoundMaster">
+
+  <div class="hero-sub">Gestión de torneos formato suizo</div>
+</div>
+
+<div class="container" style="padding-top:0">
+  <!-- Crear torneo -->
+  <div class="card">
+    <div class="card-title">Nuevo torneo</div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label">Nombre del torneo</label>
+        <input id="inp-nombre" class="form-input" placeholder="Ej: Liga Semanal Pokémon" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha</label>
+        <input id="inp-fecha" class="form-input" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tienda / Organizador</label>
+        <input id="inp-tienda" class="form-input" placeholder="Ej: Rocket Store" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lugar</label>
+        <input id="inp-lugar" class="form-input" placeholder="Ej: Rengo, Chile" type="text">
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btn-crear">Crear torneo</button>
+  </div>
+
+  <!-- Lista torneos -->
+  <div class="card">
+    <div class="card-title">Torneos registrados</div>
+    <div id="torneo-list" class="torneo-list">
+      <div class="empty"><div class="empty-icon">🏆</div>Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+  document.getElementById('inp-fecha').value = new Date().toISOString().split('T')[0];
+
+  async function cargarTorneos() {
+    const list = document.getElementById('torneo-list');
+    try {
+      const torneos = await get('/torneos/');
+      if (!torneos.length) {
+        list.innerHTML = '<div class="empty"><div class="empty-icon">🏆</div>No hay torneos aún. ¡Crea el primero!</div>';
+        return;
+      }
+      list.innerHTML = torneos.map(t => `
+        <a class="torneo-card" href="/torneo/${t.id}">
+          <div class="torneo-info">
+            <div class="torneo-nombre">${t.nombre}</div>
+            <div class="torneo-meta">📅 ${fmtFecha(t.fecha)} &nbsp;·&nbsp; 🏪 ${t.tienda} &nbsp;·&nbsp; 📍 ${t.lugar}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <span class="badge ${t.finalizado ? 'badge-green' : t.ronda_actual > 0 ? 'badge-blue' : 'badge-gray'}">
+              ${t.finalizado ? '✓ Finalizado' : t.ronda_actual > 0 ? `Ronda ${t.ronda_actual}/${t.total_rondas}` : 'Inscripciones'}
+            </span>
+            <span style="font-family:var(--fm);font-size:11px;color:var(--text2)">${t.num_participantes} jugadores</span>
+          </div>
+        </a>`).join('');
+    } catch(e) {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${e.message}</div>`;
+    }
+  }
+
+  document.getElementById('btn-crear').addEventListener('click', async () => {
+    const nombre = document.getElementById('inp-nombre').value.trim();
+    const fecha  = document.getElementById('inp-fecha').value;
+    const tienda = document.getElementById('inp-tienda').value.trim();
+    const lugar  = document.getElementById('inp-lugar').value.trim();
+    if (!nombre || !fecha || !tienda || !lugar) { toast('Completa todos los campos', 'err'); return; }
+    const btn = document.getElementById('btn-crear');
+    btn.disabled = true;
+    try {
+      await post('/torneos/', { nombre, fecha, tienda, lugar });
+      toast('Torneo creado', 'ok');
+      document.getElementById('inp-nombre').value = '';
+      document.getElementById('inp-tienda').value = '';
+      document.getElementById('inp-lugar').value  = '';
+      cargarTorneos();
+    } catch(e) { toast(e.message, 'err'); }
+    finally { btn.disabled = false; }
+  });
+
+  cargarTorneos();
+</script>
+</body>
+</html>
